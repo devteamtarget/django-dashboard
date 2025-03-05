@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Price Monitor</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .status { font-size: 24px; font-weight: bold; margin-top: 10px; }
+        .price { font-size: 20px; margin-top: 10px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Product Price Monitor</h1>
+    <div class="status">Status: <span id="job-status">Stopped</span></div>
+    <div class="price">Latest Price: <span id="latest-price">-</span></div>
+
+    <button id="start-btn">Start Monitoring</button>
+    <button id="stop-btn">Stop Monitoring</button>
+
+    <script>
+        const FASTAPI_URL = "ws://127.0.0.1:8000/ws";  // WebSocket URL
+        let socket = null;
+
+        function connectWebSocket() {
+            socket = new WebSocket(FASTAPI_URL);
+            socket.onmessage = function(event) {
+                let data = event.data;
+                if (data.startsWith("Price: ")) {
+                    let price = data.replace("Price: ", "");
+                    document.getElementById("latest-price").innerText = price;
+                    document.getElementById("job-status").innerText = "Running";
+                } else if (data.startsWith("STOPPED")) {
+                    let price = data.replace("STOPPED at ", "");
+                    document.getElementById("latest-price").innerText = price;
+                    document.getElementById("job-status").innerText = "Stopped";
+                }
+            };
+        }
+
+        document.getElementById("start-btn").onclick = function() {
+            fetch("http://127.0.0.1:8000/start");
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                connectWebSocket();  // Reconnect WebSocket
+            }
+        };
+
+        document.getElementById("stop-btn").onclick = function() {
+            fetch("http://127.0.0.1:8000/stop");
+            document.getElementById("job-status").innerText = "Stopped";
+        };
+
+        // Connect WebSocket when page loads
+        connectWebSocket();
+    </script>
+
+</body>
+</html>
